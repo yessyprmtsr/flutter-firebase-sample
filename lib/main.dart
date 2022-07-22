@@ -1,101 +1,58 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-import 'form.dart';
-
-void main() async {
-  //do initialization to use firebase
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-
+void main() {
   runApp(MaterialApp(
-      //remove the debug banner
-      debugShowCheckedModeBanner: false,
-      title: "Flutter Contact Firebase",
-      home: MyApp()));
+    home: BelajarGetData(),
+  ));
 }
 
-class MyApp extends StatefulWidget {
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
+class BelajarGetData extends StatelessWidget {
+  //define api url
+  final String apiUrl = "https://reqres.in/api/users?per_page=10";
 
-class _MyAppState extends State<MyApp> {
+  //fetch api
+  Future<List<dynamic>> _fecthDataUsers() async {
+    var result = await http.get(Uri.parse(apiUrl));
+    return json.decode(result.body)['data'];
+  }
+
   @override
   Widget build(BuildContext context) {
-    //The entry point for accessing a [FirebaseFirestore].
-    FirebaseFirestore firebase = FirebaseFirestore.instance;
-
-    //get collection from firebase, collection is table in mysql
-    CollectionReference users = firebase.collection('users');
-
     return Scaffold(
       appBar: AppBar(
-          //make appbar with icon
-          title: Center(
-        child: Text("CONTACT FORM TRY"),
-      )),
-      body: FutureBuilder<QuerySnapshot>(
-        //data to be retrieved in the future
-        future: users.get(),
-        builder: (_, snapshot) {
-          //show if there is data
-          if (snapshot.hasData) {
-            // we take the document and pass it to a variable
-            var alldata = snapshot.data!.docs;
-
-            //if there is data, make list
-            return alldata.length != 0
-                ? ListView.builder(
-
-                    // displayed as much as the variable data alldata
-                    itemCount: alldata.length,
-
-                    //make custom item with list tile.
-                    itemBuilder: (_, index) {
-                      return ListTile(
-                        leading: CircleAvatar(
-                          //get first character of name
-                          child: Text(alldata[index]['name'][0]),
-                        ),
-                        title: Text(alldata[index]['name'],
-                            style: TextStyle(fontSize: 20)),
-                        subtitle: Text(alldata[index]['phoneNumber'],
-                            style: TextStyle(fontSize: 16)),
-                        trailing: IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                //pass data to edit form
-                                MaterialPageRoute(
-                                    builder: (context) => FormPage(
-                                          id: snapshot.data!.docs[index].id,
-                                        )),
-                              );
-                            },
-                            icon: Icon(Icons.arrow_forward_rounded)),
-                      );
-                    })
-                : Center(
-                    child: Text(
-                      'No Data',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  );
-          } else {
-            return Center(child: Text("Loading...."));
-          }
-        },
+        title: Text('Belajar GET HTTP'),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => FormPage()),
-          );
-        },
-        child: Icon(Icons.add),
+      body: Container(
+        child: FutureBuilder<List<dynamic>>(
+          future: _fecthDataUsers(),
+          builder: (BuildContext context, AsyncSnapshot snapshot) {
+            //check if has data
+            if (snapshot.hasData) {
+              return ListView.builder(
+                  padding: EdgeInsets.all(10),
+                  itemCount: snapshot.data.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    //loop and show data to component
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 30,
+                        backgroundImage:
+                            NetworkImage(snapshot.data[index]['avatar']),
+                      ),
+                      title: Text(snapshot.data[index]['first_name'] +
+                          " " +
+                          snapshot.data[index]['last_name']),
+                      subtitle: Text(snapshot.data[index]['email']),
+                    );
+                  });
+            } else {
+              //load the data
+              return Center(child: CircularProgressIndicator());
+            }
+          },
+        ),
       ),
     );
   }
